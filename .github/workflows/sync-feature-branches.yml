@@ -1,0 +1,39 @@
+name: Sync Feature Branches for Delta and Parser
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  sync_feature_branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes in DeltaService or Parser
+        run: |
+          CHANGES=$(git diff --name-only origin/main...HEAD | grep -E '^DeltaService/|^Parser/' || echo "")
+          if [ -z "$CHANGES" ]; then
+            echo "No relevant changes found. Skipping sync."
+            exit 0
+          fi
+          echo "Changes detected in: $CHANGES"
+
+      - name: Sync DeltaService changes
+        if: contains(steps.checkout.outputs.changes, 'DeltaService/')
+        run: |
+          echo "Syncing DeltaService changes..."
+          git remote add delta git@github.com:Phillipedeloitte/test-delta-repo.git
+          git push delta HEAD:refs/heads/${{ github.ref_name }}
+
+      - name: Sync Parser changes
+        if: contains(steps.checkout.outputs.changes, 'Parser/')
+        run: |
+          echo "Syncing Parser changes..."
+          git remote add parser git@github.com:Phillipedeloitte/test-parser-repo.git
+          git push parser HEAD:refs/heads/${{ github.ref_name }}
+
